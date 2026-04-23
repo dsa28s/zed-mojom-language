@@ -7,3 +7,4 @@
 /.zed-extension/
 /extension.wasm
 /grammars/mojom/
+/grammars/mojom.wasm
