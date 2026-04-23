@@ -1,0 +1,21 @@
+# Copyright 2026 Dora Lee
+
+id = "mojom"
+name = "Mojom"
+version = "0.0.1"
+schema_version = 1
+authors = ["Dora Lee"]
+description = "Mojom IDL language support for Zed."
+repository = "https://github.com/dsa28s/zed-mojom-language"
+
+[language_servers.mojom-lsp]
+name = "Mojom Language Server"
+languages = ["Mojom"]
+
+[language_servers.mojom-lsp.language_ids]
+"Mojom" = "mojom"
+
+# Local development grammar source. Before publishing, replace this with the
+# public repository URL and pinned commit revision for the grammar.
+[grammars.mojom]
+repository = "file:///Users/dsa28s/Desktop/Projects/zed-mojom-language/grammars/tree-sitter-mojom"

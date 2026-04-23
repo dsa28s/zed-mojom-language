@@ -1,0 +1,7 @@
+# Copyright 2026 Dora Lee
+
+/.DS_Store
+**/.DS_Store
+/target/
+/tmp/
+/.zed-extension/
