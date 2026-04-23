@@ -14,6 +14,7 @@
 
 mod definition;
 mod diagnostic;
+mod hover;
 mod imported_files;
 mod initialization;
 mod messagesender;

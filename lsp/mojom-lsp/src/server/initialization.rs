@@ -33,7 +33,7 @@ fn create_server_capabilities() -> lsp_types::ServerCapabilities {
     lsp_types::ServerCapabilities {
         text_document_sync: Some(text_document_sync),
         selection_range_provider: None,
-        hover_provider: None,
+        hover_provider: Some(lsp_types::HoverProviderCapability::Simple(true)),
         completion_provider: None,
         signature_help_provider: None,
         definition_provider: Some(lsp_types::OneOf::Left(true)),

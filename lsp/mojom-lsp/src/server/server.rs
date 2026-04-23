@@ -75,6 +75,9 @@ fn handle_request(ctx: &mut ServerContext, msg: RequestMessage) -> anyhow::Resul
     let res = match method {
         Initialize::METHOD => initialize_request(),
         Shutdown::METHOD => shutdown_request(ctx),
+        HoverRequest::METHOD => {
+            get_request_params(msg.params).and_then(|params| hover_request(&mut ctx.diag, params))
+        }
         GotoDefinition::METHOD => get_request_params(msg.params)
             .and_then(|params| goto_definition_request(&mut ctx.diag, params)),
         _ => unimplemented_request(id, method),
@@ -122,6 +125,15 @@ fn goto_definition_request(
         return Ok(res);
     }
     return Ok(Value::Null);
+}
+
+fn hover_request(
+    diag: &mut DiagnosticsThread,
+    params: lsp_types::TextDocumentPositionParams,
+) -> RequestResult {
+    let res = diag.hover(params.text_document.uri, params.position);
+    serde_json::to_value(res)
+        .map_err(|err| ResponseError::new(ErrorCodes::InternalError, err.to_string()))
 }
 
 // Notifications

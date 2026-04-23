@@ -44,6 +44,13 @@ pub(crate) fn create_diagnostic(range: lsp_types::Range, message: String) -> lsp
 
 enum DiagnosticMessage {
     CheckSyntax((Uri, String)),
+    Hover(
+        (
+            Uri,
+            lsp_types::Position,
+            Sender<Option<lsp_types::Hover>>,
+        ),
+    ),
     GotoDefinition(
         (
             Uri,
@@ -82,6 +89,14 @@ impl DiagnosticsThread {
         let loc = loc_receiver.recv().unwrap();
         loc
     }
+
+    pub(crate) fn hover(&self, uri: Uri, pos: lsp_types::Position) -> Option<lsp_types::Hover> {
+        let (hover_sender, hover_receiver) = channel::<Option<lsp_types::Hover>>();
+        self.sender
+            .send(DiagnosticMessage::Hover((uri, pos, hover_sender)))
+            .unwrap();
+        hover_receiver.recv().unwrap()
+    }
 }
 
 pub(crate) fn start_diagnostics_thread(
@@ -99,6 +114,10 @@ pub(crate) fn start_diagnostics_thread(
         match msg {
             DiagnosticMessage::CheckSyntax((uri, text)) => {
                 diag.check(uri, text);
+            }
+            DiagnosticMessage::Hover((uri, pos, hover_sender)) => {
+                let hover = diag.find_hover(uri, pos);
+                hover_sender.send(hover).unwrap();
             }
             DiagnosticMessage::GotoDefinition((uri, pos, loc_sender)) => {
                 let loc = diag.find_definition(uri, pos);
@@ -160,6 +179,45 @@ impl Diagnostic {
         } else {
             None
         }
+    }
+
+    fn find_hover(&mut self, uri: Uri, pos: lsp_types::Position) -> Option<lsp_types::Hover> {
+        if !self.is_same_uri(&uri) {
+            self.open(uri).ok()?;
+        }
+
+        let ast = self.ast.as_ref()?;
+        let ident = get_identifier(&ast.text, &pos).to_owned();
+        if ident.is_empty() {
+            return None;
+        }
+
+        if let Some(range) =
+            super::hover::find_documented_name_range_at_position(&ast.text, &pos, ast)
+        {
+            return super::hover::hover_from_syntax_range(&ast.text, &range);
+        }
+
+        if let Some(range) = super::hover::find_documented_name_range(&ident, ast) {
+            return super::hover::hover_from_syntax_range(&ast.text, &range);
+        }
+
+        let loc = find_definition_in_doc(ast, &ident)
+            .or(find_definition_in_imported_files(&self.imported_files, &ident))?;
+        self.find_hover_at_location(loc)
+    }
+
+    fn find_hover_at_location(&self, loc: lsp_types::Location) -> Option<lsp_types::Hover> {
+        if let Some(ast) = &self.ast {
+            if loc.uri == ast.uri {
+                return super::hover::hover_from_lsp_range(&ast.text, &loc.range);
+            }
+        }
+
+        let path = loc.uri.to_file_path().ok()?;
+        let mut text = String::new();
+        File::open(path).ok()?.read_to_string(&mut text).ok()?;
+        super::hover::hover_from_lsp_range(&text, &loc.range)
     }
 
     fn is_same_uri(&self, uri: &Uri) -> bool {
