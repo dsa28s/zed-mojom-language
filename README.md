@@ -17,8 +17,21 @@ Zed extensions run their Rust code as Wasm. The extension cannot run the Rust la
 This extension resolves `mojom-lsp` in this order:
 
 1. `lsp.mojom-lsp.binary.path` from Zed settings
-2. `mojom-lsp` or `mojom-lsp.exe` from the worktree shell `PATH`
-3. A downloaded release asset from `dsa28s/zed-mojom-language`
+2. A locally built binary under `lsp/mojom-lsp/target`
+3. `mojom-lsp` or `mojom-lsp.exe` from the worktree shell `PATH`
+4. A downloaded release asset from `dsa28s/zed-mojom-language`
+
+## Local LSP Development
+
+The Mojom language server source is vendored in `lsp/mojom-lsp` so extension and server changes can ship from this repository.
+
+For local extension development, build the server from this checkout:
+
+```sh
+cargo build --manifest-path lsp/mojom-lsp/Cargo.toml --bin mojom-lsp
+```
+
+After Zed reloads the dev extension, it will prefer that local binary before falling back to `PATH` or GitHub release assets.
 
 ## Zed Settings
 
