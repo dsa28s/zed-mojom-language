@@ -33,20 +33,6 @@ impl MojomExtension {
         }
     }
 
-    fn target_triple() -> Result<&'static str> {
-        let (platform, architecture) = zed::current_platform();
-
-        match (platform, architecture) {
-            (zed::Os::Mac, zed::Architecture::Aarch64) => Ok("aarch64-apple-darwin"),
-            (zed::Os::Mac, zed::Architecture::X8664) => Ok("x86_64-apple-darwin"),
-            (zed::Os::Windows, zed::Architecture::Aarch64) => Ok("aarch64-pc-windows-msvc"),
-            (zed::Os::Windows, zed::Architecture::X8664) => Ok("x86_64-pc-windows-msvc"),
-            (platform, architecture) => Err(format!(
-                "unsupported Mojom LSP platform: {platform:?} {architecture:?}"
-            )),
-        }
-    }
-
     fn configured_binary(
         language_server_id: &LanguageServerId,
         worktree: &Worktree,
@@ -77,27 +63,6 @@ impl MojomExtension {
                 path: PathBuf::from(path),
                 args,
                 env: worktree.shell_env(),
-            })
-    }
-
-    fn extension_built_binary(args: Vec<String>) -> Option<MojomLspBinary> {
-        let target_triple = Self::target_triple().ok()?;
-        let executable_name = Self::executable_name();
-        let candidates = [
-            format!("lsp/mojom-lsp/target/{target_triple}/release/{executable_name}"),
-            format!("lsp/mojom-lsp/target/{target_triple}/debug/{executable_name}"),
-            format!("lsp/mojom-lsp/target/release/{executable_name}"),
-            format!("lsp/mojom-lsp/target/debug/{executable_name}"),
-        ];
-
-        candidates
-            .into_iter()
-            .map(PathBuf::from)
-            .find(|path| path.is_file())
-            .map(|path| MojomLspBinary {
-                path,
-                args,
-                env: Default::default(),
             })
     }
 
@@ -234,10 +199,6 @@ impl MojomExtension {
         }
 
         let args = Vec::new();
-
-        if let Some(binary) = Self::extension_built_binary(args.clone()) {
-            return Ok(binary);
-        }
 
         if let Some(binary) = Self::worktree_binary(worktree, args.clone()) {
             return Ok(binary);
