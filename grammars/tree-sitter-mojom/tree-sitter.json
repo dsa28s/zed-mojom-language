@@ -1,0 +1,26 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "metadata": {
+    "version": "0.0.1",
+    "license": "Apache-2.0",
+    "description": "Mojom grammar for Tree-sitter",
+    "authors": [
+      {
+        "name": "Dora Lee"
+      }
+    ]
+  },
+  "grammars": [
+    {
+      "name": "mojom",
+      "camelcase": "Mojom",
+      "title": "Mojom",
+      "scope": "source.mojom",
+      "file-types": [
+        "mojom",
+        "test-mojom"
+      ],
+      "injection-regex": "^mojom$"
+    }
+  ]
+}

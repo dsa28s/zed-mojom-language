@@ -1,0 +1,20 @@
+{
+  "name": "tree-sitter-mojom",
+  "version": "0.0.1",
+  "description": "Mojom grammar for Tree-sitter",
+  "author": "Dora Lee",
+  "license": "Apache-2.0",
+  "main": "grammar.js",
+  "tree-sitter": [
+    {
+      "scope": "source.mojom",
+      "file-types": [
+        "mojom",
+        "test-mojom"
+      ]
+    }
+  ],
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.0"
+  }
+}
