@@ -9,10 +9,6 @@ on:
         description: GitHub release tag to create or update.
         required: true
         default: mojom-lsp-v0.1.2
-      mojom_lsp_version:
-        description: mojom-lsp crate version to package.
-        required: true
-        default: 0.1.2
 
 permissions:
   contents: write
@@ -43,23 +39,23 @@ jobs:
             archive: zip
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Install Rust target
         run: rustup target add ${{ matrix.target }}
 
-      - name: Install mojom-lsp
-        run: cargo install mojom-lsp --version "${{ inputs.mojom_lsp_version }}" --locked --target "${{ matrix.target }}" --root dist
+      - name: Build mojom-lsp
+        run: cargo build --manifest-path lsp/mojom-lsp/Cargo.toml --locked --release --target "${{ matrix.target }}" --bin mojom-lsp
 
       - name: Archive macOS binary
         if: matrix.archive == 'tar'
-        run: tar -czf "${{ matrix.asset }}" -C dist/bin mojom-lsp
+        run: tar -czf "${{ matrix.asset }}" -C "lsp/mojom-lsp/target/${{ matrix.target }}/release" mojom-lsp
 
       - name: Archive Windows binary
         if: matrix.archive == 'zip'
         shell: pwsh
-        run: |
-          Push-Location dist/bin
-          Compress-Archive -Path mojom-lsp.exe -DestinationPath "../../${{ matrix.asset }}" -Force
-          Pop-Location
+        run: Compress-Archive -Path "lsp/mojom-lsp/target/${{ matrix.target }}/release/mojom-lsp.exe" -DestinationPath "${{ matrix.asset }}" -Force
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
