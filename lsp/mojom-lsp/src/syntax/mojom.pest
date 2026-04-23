@@ -1,0 +1,221 @@
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This is written in PEG and looks slightly different from the original
+// grammar. Please consult the pest's document which describes how PEG works.
+// https://pest.rs/book/grammars/peg.html
+
+line_comment = { "//" ~ (!NEWLINE ~ ANY)* }
+block_comment = { "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+COMMENT = _{ line_comment | block_comment }
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+
+mojom_file = {
+  SOI ~ statement* ~ EOI
+}
+
+statement = {
+  module_stmt |
+  import_stmt |
+  struct_stmt |
+  union_stmt |
+  interface |
+  enum_stmt |
+  const_stmt
+}
+
+module_stmt = { attribute_section? ~ t_module ~ identifier ~ t_semicolon }
+import_stmt = { attribute_section? ~ t_import ~ string_literal ~ t_semicolon }
+
+attribute_section = {
+  t_lbracket ~ t_rbracket |
+  t_lbracket ~ attribute ~ (t_comma ~ attribute)* ~ t_rbracket
+}
+attribute = {
+  name ~ t_equal ~ identifier |
+  name ~ t_equal ~ literal |
+  name
+}
+
+struct_stmt = { attribute_section? ~ t_struct ~ name ~ struct_body? ~ t_semicolon }
+struct_body = { t_lbrace ~ struct_item* ~ t_rbrace }
+struct_item = {
+  const_stmt |
+  enum_stmt |
+  struct_field
+}
+struct_field = { attribute_section? ~ type_spec ~ name ~ ordinal_value? ~ default? ~ t_semicolon }
+default = { t_equal ~ constant }
+
+union_stmt = {
+  attribute_section? ~
+  t_union ~
+  name ~
+  t_lbrace ~
+  union_field* ~
+  t_rbrace ~
+  t_semicolon
+}
+union_field = { attribute_section? ~ type_spec ~ name ~ ordinal_value? ~ t_semicolon }
+
+interface = {
+  attribute_section? ~
+  t_interface ~
+  name ~
+  t_lbrace ~
+  interface_body* ~
+  t_rbrace ~
+  t_semicolon
+}
+interface_body = {
+  const_stmt | enum_stmt | method_stmt
+}
+
+identifier = @{ name ~ "." ~ identifier | name }
+
+type_spec = {
+  type_name ~ t_nullable |
+  type_name
+}
+type_name = { fixed_array | array | map | interface_request | basic_type_name }
+basic_type_name = {
+  numeric_type | handle_type |
+  associated_remote_type | associated_receiver_type |
+  t_associated ~ identifier | identifier |
+  remote_type | receiver_type
+}
+numeric_type = {
+  "bool" | "int8" | "uint8" | "int16" | "uint16" | "int32" | "uint32" |
+  "int64" | "uint64" | "float" | "double"
+}
+handle_type = { t_handle ~ (t_langlebracket ~ specific_handle_type ~ t_ranglebracket)? }
+specific_handle_type = {
+  "message_pipe" | "shared_buffer" | "data_pipe_consumer" |
+  "data_pipe_producer" | "platform"
+}
+array = { t_array ~ t_langlebracket ~ type_spec ~ t_ranglebracket }
+fixed_array = { t_array ~ t_langlebracket ~ type_spec ~ t_comma ~ int_const_dec ~ t_ranglebracket }
+map = { t_map ~ t_langlebracket ~ identifier ~ t_comma ~ type_spec ~ t_ranglebracket }
+interface_request = {
+  t_associated ~ identifier ~ t_amp |
+  identifier ~ t_amp
+}
+remote_type = { "pending_remote" ~ t_langlebracket ~ identifier ~ t_ranglebracket }
+receiver_type = { "pending_receiver" ~ t_langlebracket ~ identifier ~ t_ranglebracket }
+associated_remote_type = { "pending_associated_remote" ~ t_langlebracket ~ identifier ~ t_ranglebracket }
+associated_receiver_type = { "pending_associated_receiver" ~ t_langlebracket ~ identifier ~ t_ranglebracket }
+
+const_stmt = {
+  attribute_section? ~ t_const ~ type_spec ~ name ~ t_equal ~ constant ~ t_semicolon
+}
+constant = { (literal | identifier) }
+
+enum_stmt = { attribute_section? ~ "enum" ~ name ~ enum_block? ~ t_semicolon }
+enum_block = { t_lbrace ~ enum_value? ~ (t_comma ~ enum_value)* ~ t_comma? ~ t_rbrace }
+enum_value = {
+  attribute_section? ~ name ~ t_equal ~ integer |
+  attribute_section? ~ name ~ t_equal ~ identifier |
+  attribute_section? ~ name
+}
+
+method_stmt = {
+  attribute_section? ~
+  name ~
+  ordinal_value? ~
+  parameter_list ~
+  response? ~
+  t_semicolon
+}
+parameter_list = {
+  t_lparen ~ t_rparen |
+  t_lparen ~ parameter ~ (t_comma ~ parameter)* ~ t_rparen
+}
+parameter = { attribute_section? ~ type_spec ~ name ~ ordinal_value? }
+response = { t_arrow ~ parameter_list }
+
+keyword = {
+  t_array | t_associated | t_const | t_handle | t_import | t_interface |
+  t_map | t_module | t_struct | t_union | "enum" | "true" | "false" | "default" |
+  "pending_receiver" | "pending_remote"
+}
+
+char = { ASCII_ALPHA | "_" }
+name_part = @{ char ~ (char | ASCII_DIGIT)* }
+keyword_prefixed_name = @{ keyword ~ (char | ASCII_DIGIT)+ }
+name = {
+  !keyword ~ name_part |
+  keyword_prefixed_name
+}
+
+literal = { number | "true" | "false" | "default" | string_literal }
+
+number = @{ number_const | "+" ~ number_const | "-" ~ number_const }
+number_const = @{
+  "0"? ~ "." ~ ASCII_DIGIT* ~ float_exp? |
+  "0" ~ ("x" | "X") ~ ASCII_HEX_DIGIT+ |
+  number_part ~ ("." ~ ASCII_DIGIT*)? ~ float_exp? |
+  "0"
+}
+number_part = @{ (ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
+
+integer = @{ int_const | "+" ~ int_const | "-" ~ int_const }
+int_const = @{ int_const_hex | int_const_dec }
+int_const_dec = @{ "0" | (ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
+int_const_hex = @{ "0" ~ ("x" | "X") ~ ASCII_HEX_DIGIT+ }
+
+ordinal_value = @{ "@" ~ int_const_dec }
+
+float = @{
+  ("+" | "-")? ~
+  float_dec ~
+  ("." ~ ASCII_DIGIT*)? ~
+  float_exp?
+}
+float_dec = @{ "0" | (ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) }
+float_exp = @{ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+) }
+
+string_literal = ${ "\"" ~ string_inner ~ "\"" }
+string_inner = @{ string_char* }
+string_char = {
+  !("\"" | "\\") ~ ANY
+  | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+}
+
+// Tokens. Some of these aren't strictly needed but useful to generate
+// meaningful error messages.
+t_array = { "array" }
+t_associated = { "associated" }
+t_const = { "const" }
+t_handle = { "handle" }
+t_import = { "import" }
+t_interface = { "interface" }
+t_map = { "map" }
+t_module = { "module" }
+t_struct = { "struct" }
+t_union = { "union" }
+t_amp = { "&" }
+t_arrow = { "=>" }
+t_comma = { "," }
+t_equal = { "=" }
+t_langlebracket = { "<" }
+t_lbrace = { "{" }
+t_lbracket = { "[" }
+t_lparen = { "(" }
+t_nullable = { "?" }
+t_ranglebracket = { ">" }
+t_rbrace = { "}" }
+t_rbracket = { "]" }
+t_rparen = { ")" }
+t_semicolon = { ";" }
