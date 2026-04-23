@@ -5,3 +5,5 @@
 /target/
 /tmp/
 /.zed-extension/
+/extension.wasm
+/grammars/mojom/
