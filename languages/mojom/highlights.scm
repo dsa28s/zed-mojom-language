@@ -29,7 +29,7 @@
   "false"
 ] @boolean
 
-"default" @constant.builtin
+(default_literal) @constant.builtin
 
 (comment) @comment
 (string) @string
