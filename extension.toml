@@ -17,5 +17,5 @@ languages = ["Mojom"]
 
 [grammars.mojom]
 repository = "https://github.com/dsa28s/zed-mojom-language"
-rev = "5948f0b9aa848af84938f64c6a262d132a9fbd8a"
+rev = "5cdb6b4e3a4b6dda354c4893ffc4447d6f3c742d"
 path = "grammars/tree-sitter-mojom"
